@@ -1,5 +1,5 @@
 ---
-name: dokploy-deploy
+name: dokploy-api-mcp
 description: >-
   Deploy and manage applications on Dokploy (self-hosted PaaS).
   Use when deploying apps, managing services (PostgreSQL, Redis),
@@ -12,7 +12,7 @@ disable-model-invocation: false
 allowed-tools: Bash(curl *) Bash(npx *) Bash(docker *) Bash(ssh *) Bash(git *) Read Write WebFetch
 metadata:
   author: ai-ads-agent
-  version: "2.0"
+  version: "1.0"
   category: deployment
 ---
 
