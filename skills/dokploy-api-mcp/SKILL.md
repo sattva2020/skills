@@ -39,7 +39,7 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 
 ```
 1. Check: does ~/.claude/mcp.json contain a "dokploy" server entry?
-2. If NO → run: python3 ~/.claude/skills/dokploy-deploy/scripts/setup.py
+2. If NO → run: python3 ~/.claude/skills/dokploy-api-mcp/scripts/setup.py
 3. The script will:
    - Ask for Dokploy URL (e.g., https://dokploy.example.com)
    - Ask for API key (generated in Dashboard → Settings → Profile → API/CLI)
@@ -51,7 +51,7 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 **With CLI arguments** (non-interactive):
 
 ```bash
-python3 ~/.claude/skills/dokploy-deploy/scripts/setup.py --url https://dokploy.example.com --key YOUR_API_KEY
+python3 ~/.claude/skills/dokploy-api-mcp/scripts/setup.py --url https://dokploy.example.com --key YOUR_API_KEY
 ```
 
 **After setup**, the MCP server (`@ahdev/dokploy-mcp`, 67 tools) will be available on next Claude Code restart. Prefer MCP tools over curl for all operations.

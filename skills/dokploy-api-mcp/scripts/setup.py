@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dokploy Deploy Skill — Interactive Setup
+Dokploy API MCP Skill — Interactive Setup
 
 Configures:
 1. MCP server in ~/.claude/mcp.json (auto-installs @ahdev/dokploy-mcp)
@@ -8,8 +8,8 @@ Configures:
 3. Lists available projects/apps for verification
 
 Usage:
-  python3 ~/.claude/skills/dokploy-deploy/scripts/setup.py
-  python3 ~/.claude/skills/dokploy-deploy/scripts/setup.py --url https://dokploy.example.com --key YOUR_KEY
+  python3 ~/.claude/skills/dokploy-api-mcp/scripts/setup.py
+  python3 ~/.claude/skills/dokploy-api-mcp/scripts/setup.py --url https://dokploy.example.com --key YOUR_KEY
 """
 
 import json
@@ -155,7 +155,7 @@ def configure_mcp(url, key):
 
 def main():
     print("=" * 50)
-    print("  Dokploy Deploy Skill — Setup")
+    print("  Dokploy API MCP Skill — Setup")
     print("=" * 50)
     print()
 
@@ -239,7 +239,7 @@ def main():
     print(f"  Config:     {MCP_JSON}")
     print()
     print("  Restart Claude Code to activate MCP server.")
-    print("  Then use /dokploy-deploy to deploy your apps.")
+    print("  Then use /dokploy-api-mcp to deploy your apps.")
     print("=" * 50)
 
 
