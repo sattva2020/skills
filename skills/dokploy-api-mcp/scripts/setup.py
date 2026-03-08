@@ -3,7 +3,7 @@
 Dokploy API MCP Skill — Interactive Setup
 
 Configures:
-1. MCP server in ~/.claude/mcp.json (auto-installs @ahdev/dokploy-mcp)
+1. MCP server in ~/.claude/mcp.json (auto-installs @sattva/dokploy-mcp)
 2. Validates connection to Dokploy instance
 3. Lists available projects/apps for verification
 
@@ -22,6 +22,7 @@ import ssl
 
 CLAUDE_DIR = os.path.expanduser("~/.claude")
 MCP_JSON = os.path.join(CLAUDE_DIR, "mcp.json")
+LOCAL_MCP_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "MCP", "dokploy-mcp", "dist", "index.js"))
 
 
 def get_input(prompt, default=None):
@@ -125,12 +126,20 @@ def configure_mcp(url, key):
 
     mcp = read_mcp_json()
 
-    is_windows = platform.system() == "Windows"
-
-    if is_windows:
+    # Prefer local development build if available
+    if os.path.exists(LOCAL_MCP_PATH):
+        server_config = {
+            "command": "node",
+            "args": [LOCAL_MCP_PATH.replace("\\", "/")],
+            "env": {
+                "DOKPLOY_URL": api_url,
+                "DOKPLOY_API_KEY": key
+            }
+        }
+    elif platform.system() == "Windows":
         server_config = {
             "command": "cmd",
-            "args": ["/c", "npx", "-y", "@ahdev/dokploy-mcp"],
+            "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp"],
             "env": {
                 "DOKPLOY_URL": api_url,
                 "DOKPLOY_API_KEY": key
@@ -139,7 +148,7 @@ def configure_mcp(url, key):
     else:
         server_config = {
             "command": "npx",
-            "args": ["-y", "@ahdev/dokploy-mcp"],
+            "args": ["-y", "@sattva/dokploy-mcp"],
             "env": {
                 "DOKPLOY_URL": api_url,
                 "DOKPLOY_API_KEY": key
@@ -234,7 +243,10 @@ def main():
     print("=" * 50)
     print("  Setup complete!")
     print()
-    print("  MCP server: @ahdev/dokploy-mcp (67 tools)")
+    if os.path.exists(LOCAL_MCP_PATH):
+        print(f"  MCP server: local ({LOCAL_MCP_PATH})")
+    else:
+        print("  MCP server: @sattva/dokploy-mcp (449 tools)")
     print(f"  Dokploy:    {dokploy_url}")
     print(f"  Config:     {MCP_JSON}")
     print()

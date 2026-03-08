@@ -153,7 +153,7 @@ curl -X POST "https://app-domain/api/migrate" \
 **Workaround:**
 1. Poll `deployment.all` for status changes (`running` → `done`/`error`)
 2. Use the Dokploy Dashboard UI to view build logs
-3. Use the MCP server (`@ahdev/dokploy-mcp`) which may handle WebSocket internally
+3. Use the MCP server (`@sattva/dokploy-mcp`) which may handle WebSocket internally
 
 ## 6. External Database Port Unreachable
 
@@ -219,7 +219,29 @@ export function getQueue() {
 }
 ```
 
-## 10. Stripe SDK Initialization During Build
+## 10. Traefik v3 Breaking Changes (Dokploy v0.25+)
+
+**Problem:** After Dokploy upgrade to v0.25+, custom Traefik middleware configs stop working or routing breaks.
+
+**Cause:** Dokploy v0.25 upgraded to Traefik v3. Key breaking changes:
+- `PathPrefix` middleware syntax changed
+- Some deprecated v2 labels no longer work
+- `entryPoints` naming may differ
+
+**Fix:**
+1. Check current Traefik config via `application.readTraefikConfig`
+2. Update labels to Traefik v3 syntax:
+```yaml
+# Traefik v2 (old)
+- "traefik.http.routers.app.rule=PathPrefix(`/api`)"
+# Traefik v3 (new) — same syntax but verify middlewares
+- "traefik.http.routers.app.rule=PathPrefix(`/api`)"
+```
+3. Review middleware configs — some v2 middleware plugins may need updates
+4. Use `settings.readMiddlewareTraefikConfig` and `settings.updateMiddlewareTraefikConfig` MCP tools to inspect/fix global middleware
+5. If Traefik dashboard is needed: use `settings.toggleDashboard` MCP tool
+
+## 11. Stripe SDK Initialization During Build
 
 **Error:**
 ```

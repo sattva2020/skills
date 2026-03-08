@@ -2,24 +2,28 @@
 name: dokploy-api-mcp
 description: >-
   Deploy and manage applications on Dokploy (self-hosted PaaS).
-  Use when deploying apps, managing services (PostgreSQL, Redis),
-  configuring domains, running migrations, or troubleshooting
-  Dokploy deployments. Covers API (tRPC), CLI, MCP server,
-  and common pitfalls with Next.js, Docker, and database drivers.
+  Use when deploying apps, managing Docker Compose services,
+  databases (PostgreSQL, MySQL, MariaDB, MongoDB, Redis),
+  configuring domains, SSL, backups, notifications, rollbacks,
+  scheduled tasks, environments, organizations, SSO,
+  preview deployments, patches, Docker Swarm clusters,
+  running migrations, or troubleshooting Dokploy deployments.
+  Covers tRPC API (449 endpoints), CLI, MCP server (449 tools),
+  and common pitfalls with Next.js, Docker, and Traefik.
 argument-hint: "[action] <details>"
 user-invocable: true
 disable-model-invocation: false
 allowed-tools: Bash(curl *) Bash(npx *) Bash(docker *) Bash(ssh *) Bash(git *) Read Write WebFetch
 metadata:
   author: ai-ads-agent
-  version: "1.0"
+  version: "2.0"
   category: deployment
 ---
 
 # Dokploy Deployment
 
-Deploy and manage applications on a self-hosted Dokploy instance.
-Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Traefik.
+Deploy and manage applications on a self-hosted Dokploy instance (v0.28.4+).
+Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Traefik v3.
 
 ## Quick Reference
 
@@ -30,7 +34,8 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 | Swagger UI | `https://<DOKPLOY_HOST>/swagger` (browser login required) |
 | Auth header | `x-api-key: <TOKEN>` |
 | CLI install | `npm install -g @dokploy/cli` |
-| MCP server | `@ahdev/dokploy-mcp` (67 tools) |
+| MCP server | `@sattva/dokploy-mcp` (449 tools — full API coverage) |
+| API version | OpenAPI 3.1.0, 449 endpoints |
 | Docs | https://docs.dokploy.com |
 
 ## First Run — Setup
@@ -39,7 +44,8 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 
 ```
 1. Check: does ~/.claude/mcp.json contain a "dokploy" server entry?
-2. If NO → run: python3 ~/.claude/skills/dokploy-api-mcp/scripts/setup.py
+2. If NO → run: python3 skills/dokploy-api-mcp/scripts/setup.py
+   (or the full path in the user's skill installation directory)
 3. The script will:
    - Ask for Dokploy URL (e.g., https://dokploy.example.com)
    - Ask for API key (generated in Dashboard → Settings → Profile → API/CLI)
@@ -51,10 +57,10 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 **With CLI arguments** (non-interactive):
 
 ```bash
-python3 ~/.claude/skills/dokploy-api-mcp/scripts/setup.py --url https://dokploy.example.com --key YOUR_API_KEY
+python3 skills/dokploy-api-mcp/scripts/setup.py --url https://dokploy.example.com --key YOUR_API_KEY
 ```
 
-**After setup**, the MCP server (`@ahdev/dokploy-mcp`, 67 tools) will be available on next Claude Code restart. Prefer MCP tools over curl for all operations.
+**After setup**, the MCP server (`@sattva/dokploy-mcp`, 449 tools) will be available on next Claude Code restart. Prefer MCP tools over curl for all operations.
 
 ## Environment Variables
 
@@ -127,7 +133,7 @@ Body: {"json":{...}}
 
 ### Key Endpoints
 
-See [references/API-REFERENCE.md](references/API-REFERENCE.md) for the full list.
+See [references/API-REFERENCE.md](references/API-REFERENCE.md) for the full list (449 endpoints).
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -140,12 +146,20 @@ See [references/API-REFERENCE.md](references/API-REFERENCE.md) for the full list
 | `application.update` | POST | Update app settings |
 | `application.saveBuildType` | POST | Change build type |
 | `application.saveEnvironment` | POST | Set environment variables |
+| `compose.one` | GET | Get compose service |
+| `compose.deploy` | POST | Deploy compose service |
 | `deployment.all` | GET | List deployments for app |
 | `domain.byApplicationId` | GET | Get domains for app |
 | `domain.create` | POST | Add custom domain |
 | `postgres.one` | GET | Get PostgreSQL service |
-| `postgres.update` | POST | Update PostgreSQL settings |
 | `redis.one` | GET | Get Redis service |
+| `mariadb.one` | GET | Get MariaDB service |
+| `mongo.one` | GET | Get MongoDB service |
+| `environment.byProjectId` | GET | List environments |
+| `rollback.rollback` | POST | Rollback deployment |
+| `schedule.create` | POST | Create scheduled task |
+| `backup.create` | POST | Create backup config |
+| `notification.createTelegram` | POST | Setup Telegram notifications |
 | `docker.getContainersByAppNameMatch` | GET | List Docker containers |
 | `application.readTraefikConfig` | GET | Read Traefik config |
 
@@ -180,11 +194,11 @@ dokploy project create
 dokploy project list
 ```
 
-## MCP Server (67 tools — preferred for AI agents)
+## MCP Server (449 tools — full API coverage)
 
-**When MCP is available, prefer MCP tools over curl.** MCP handles tRPC URL encoding and response parsing automatically.
+**When MCP is available, ALWAYS prefer MCP tools over curl.** MCP handles tRPC URL encoding and response parsing automatically.
 
-See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full 67-tool reference.
+See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full 449-tool reference.
 
 ### Setup
 
@@ -197,7 +211,7 @@ See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full 67-tool refe
   "mcpServers": {
     "dokploy": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@ahdev/dokploy-mcp"],
+      "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp"],
       "env": {
         "DOKPLOY_URL": "https://dokploy.example.com/api",
         "DOKPLOY_API_KEY": "<your-api-token>"
@@ -208,42 +222,73 @@ See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full 67-tool refe
 ```
 
 **Note:** On macOS/Linux use `"command": "npx"` directly instead of `cmd /c`.
+**Local dev:** use `"command": "node", "args": ["e:/My/MCP/dokploy-mcp/dist/index.js"]`.
 
-### Key MCP Tools by Category
+### MCP Tools by Category (449 total)
 
-**Projects:** `project-all`, `project-one`, `project-create`, `project-update`, `project-duplicate`, `project-remove`
-
-**Applications (26 tools):**
-- Status: `application-one`, `application-create`, `application-update`, `application-delete`, `application-move`
-- Deploy: `application-deploy`, `application-redeploy`, `application-start`, `application-stop`, `application-cancelDeployment`, `application-reload`
-- Config: `application-saveBuildType`, `application-saveEnvironment`
-- Git: `application-saveGithubProvider`, `application-saveGitlabProvider`, `application-saveBitbucketProvider`, `application-saveGiteaProvider`, `application-saveGitProvider`, `application-saveDockerProvider`, `application-disconnectGitProvider`
-- Monitoring: `application-readAppMonitoring`, `application-readTraefikConfig`, `application-updateTraefikConfig`
-
-**Domains (9 tools):** `domain-byApplicationId`, `domain-create`, `domain-update`, `domain-delete`, `domain-validateDomain`, `domain-generateDomain`
-
-**PostgreSQL (13 tools):** `postgres-create`, `postgres-one`, `postgres-update`, `postgres-remove`, `postgres-deploy`, `postgres-start`, `postgres-stop`, `postgres-rebuild`, `postgres-saveExternalPort`, `postgres-saveEnvironment`
-
-**MySQL (13 tools):** Same pattern with `mysql-*` prefix.
+| Category | Tools | Description |
+|----------|-------|-------------|
+| `application_*` | 29 | App lifecycle, deploy, config, git providers |
+| `compose_*` | 28 | Docker Compose services |
+| `settings_*` | 49 | Server settings, Traefik, cleanup, monitoring |
+| `notification_*` | 38 | Slack/Telegram/Discord/Email/Webhook/Gotify/Ntfy/Pushover/Lark/Teams |
+| `user_*` | 18 | User management, API keys, permissions |
+| `server_*` | 16 | Remote server management |
+| `postgres_*` | 14 | PostgreSQL management |
+| `redis_*` | 14 | Redis management |
+| `mysql_*` | 14 | MySQL management |
+| `mariadb_*` | 14 | MariaDB management |
+| `mongo_*` | 14 | MongoDB management |
+| `patch_*` | 12 | File patches |
+| `backup_*` | 11 | Database backups |
+| `organization_*` | 10 | Organizations, invitations |
+| `sso_*` | 10 | SSO/SAML enterprise auth |
+| `domain_*` | 9 | Domain/SSL management |
+| `ai_*` | 9 | AI-powered compose generator |
+| `deployment_*` | 8 | Deployment history, queue |
+| `project_*` | 8 | Project management |
+| `gitea_*` | 8 | Gitea provider |
+| `docker_*` | 7 | Container operations |
+| `bitbucket_*` | 7 | Bitbucket provider |
+| `registry_*` | 7 | Docker registries |
+| `gitlab_*` | 7 | GitLab provider |
+| `stripe_*` | 7 | Billing (cloud) |
+| `environment_*` | 7 | Environments per project |
+| `github_*` | 6 | GitHub provider |
+| `licenseKey_*` | 6 | Enterprise licensing |
+| `sshKey_*` | 6 | SSH key management |
+| `mounts_*` | 6 | Volume mounts |
+| `destination_*` | 6 | S3 backup destinations |
+| `schedule_*` | 6 | Scheduled tasks/cron |
+| `volumeBackups_*` | 6 | Volume backups |
+| `certificates_*` | 4 | SSL certificates |
+| `cluster_*` | 4 | Docker Swarm cluster |
+| `port_*` | 4 | Port management |
+| `redirects_*` | 4 | URL redirects |
+| `security_*` | 4 | Security settings |
+| `previewDeployment_*` | 4 | Preview deployments |
+| `swarm_*` | 3 | Swarm node info |
+| `gitProvider_*` | 2 | Git provider generic |
+| `rollback_*` | 2 | Deployment rollbacks |
+| `admin_*` | 1 | Admin setup |
 
 ### MCP Deployment Workflow
 
 ```
-1. application-one                → check current status
-2. application-saveEnvironment    → set/update env vars if needed
-3. application-saveBuildType      → ensure Dockerfile build configured
-4. application-deploy             → trigger deployment
-5. application-one                → poll until applicationStatus = "done"
+1. application_one                → check current status
+2. application_saveEnvironment    → set/update env vars if needed
+3. application_saveBuildType      → ensure Dockerfile build configured
+4. application_deploy             → trigger deployment
+5. application_one                → poll until applicationStatus = "done"
 6. curl health endpoint           → verify app is working
 ```
 
-### MCP Limitations (use curl or Dashboard)
+### MCP Limitations (use Dashboard only)
 
-- **Build/container logs** — WebSocket only, no MCP tool
-- **Redis management** — not in MCP, use `redis.*` API via curl
-- **MariaDB/MongoDB** — not in MCP, use `mariadb.*`/`mongo.*` API
-- **Docker Compose** — not in MCP, use `compose.*` API
-- **Backups, notifications, schedules** — not in MCP
+- **Build/container logs** — WebSocket only, no MCP or REST endpoint
+- **Docker exec into container** — No API endpoint, use SSH to VPS
+
+**Everything else is available through MCP tools**, including: Redis, MariaDB, MongoDB, Compose, Backups, Notifications, Schedules, Rollbacks, SSO, Patches, Organizations, and more.
 
 ## Common Pitfalls
 
@@ -260,6 +305,7 @@ See [references/PITFALLS.md](references/PITFALLS.md) for detailed solutions.
 | External DB port unreachable | VPS firewall blocks port | Use internal Docker network names |
 | SSL certificate error from curl | Self-signed or Let's Encrypt delay | Use `curl -sk` or wait for cert provisioning |
 | 404 on API routes after deploy | Route not in standalone output | Verify route exists in `.next/standalone` |
+| Traefik middleware broken after upgrade | Dokploy v0.25+ uses Traefik v3 | Update middleware config syntax |
 
 ## Build Types
 
@@ -287,9 +333,9 @@ Internal hostnames use Docker network. External ports optional (may need firewal
 
 1. Add domain via Dashboard or API (`domain.create`)
 2. Point DNS A-record to VPS IP
-3. Dokploy auto-provisions Let's Encrypt certificate via Traefik
+3. Dokploy auto-provisions Let's Encrypt certificate via Traefik v3
 4. HTTPS works automatically after DNS propagation
 
 ## Next.js Specific Guide
 
-See [references/NEXTJS-GUIDE.md](references/NEXTJS-GUIDE.md) for full details on deploying Next.js to Dokploy.
+See [references/NEXTJS-GUIDE.md](references/NEXTJS-GUIDE.md) for full details on deploying Next.js 14/15 to Dokploy.

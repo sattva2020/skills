@@ -1,6 +1,8 @@
 # Deploying Next.js to Dokploy
 
-Step-by-step guide for deploying Next.js (App Router) applications to Dokploy, covering all known pitfalls.
+Step-by-step guide for deploying Next.js 14/15 (App Router) applications to Dokploy, covering all known pitfalls.
+
+**Note:** This guide applies to both Next.js 14 and 15. Next.js 15 changed `params` to async in dynamic routes and uses React 19, but the Dokploy deployment process is identical.
 
 ## Prerequisites
 
