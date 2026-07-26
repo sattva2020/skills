@@ -1,4 +1,6 @@
-# Dokploy MCP Server — 449 Tools Reference
+# Dokploy MCP Server — Tools Reference
+
+> Tool count follows your Dokploy version (449 @ v0.28.4, 539 @ v0.29.8). This reference lists the v0.28.4 baseline; newer instances add `ai_*`, `forwardAuth_*`, `customRole_*`, `whitelabeling_*`, `patch_*` and more — discover them via `tools/list`.
 
 Official MCP server: `@sattva/dokploy-mcp` (repo: [sattva2020/dokploy-mcp](https://github.com/sattva2020/dokploy-mcp))
 

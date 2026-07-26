@@ -8,7 +8,7 @@ description: >-
   scheduled tasks, environments, organizations, SSO,
   preview deployments, patches, Docker Swarm clusters,
   running migrations, or troubleshooting Dokploy deployments.
-  Covers tRPC API (449 endpoints), CLI, MCP server (449 tools),
+  Covers tRPC API (~540 endpoints), CLI, MCP server (~540 tools),
   and common pitfalls with Next.js, Docker, and Traefik.
 argument-hint: "[action] <details>"
 user-invocable: true
@@ -16,7 +16,7 @@ disable-model-invocation: false
 allowed-tools: Bash(curl *) Bash(npx *) Bash(docker *) Bash(ssh *) Bash(git *) Read Write WebFetch
 metadata:
   author: ai-ads-agent
-  version: "2.0"
+  version: "2.1"
   category: deployment
 ---
 
@@ -34,8 +34,8 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 | Swagger UI | `https://<DOKPLOY_HOST>/swagger` (browser login required) |
 | Auth header | `x-api-key: <TOKEN>` |
 | CLI install | `npm install -g @dokploy/cli` |
-| MCP server | `@sattva/dokploy-mcp` (449 tools — full API coverage) |
-| API version | OpenAPI 3.1.0, 449 endpoints |
+| MCP server | `@sattva/dokploy-mcp` (full API coverage; ~540 tools on Dokploy v0.29.x) |
+| API version | OpenAPI 3.1.0; tool count follows your Dokploy version (449 @ v0.28.4, 539 @ v0.29.8) |
 | Docs | https://docs.dokploy.com |
 
 ## First Run — Setup
@@ -60,7 +60,7 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 python3 skills/dokploy-api-mcp/scripts/setup.py --url https://dokploy.example.com --key YOUR_API_KEY
 ```
 
-**After setup**, the MCP server (`@sattva/dokploy-mcp`, 449 tools) will be available on next Claude Code restart. Prefer MCP tools over curl for all operations.
+**After setup**, the MCP server (`@sattva/dokploy-mcp`, ~540 tools) will be available on next Claude Code restart. Prefer MCP tools over curl for all operations.
 
 ## Environment Variables
 
@@ -194,11 +194,28 @@ dokploy project create
 dokploy project list
 ```
 
-## MCP Server (449 tools — full API coverage)
+## MCP Server (full API coverage, ~540 tools)
 
 **When MCP is available, ALWAYS prefer MCP tools over curl.** MCP handles tRPC URL encoding and response parsing automatically.
 
-See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full 449-tool reference.
+See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full tool reference.
+
+### Server behavior (v1.1.0+)
+
+- **Safety annotations**: GET tools carry `readOnlyHint`, mutating verbs (deploy/delete/stop/update/...) carry `destructiveHint` — clients can highlight or gate dangerous calls.
+- **Responses are compact JSON**, truncated above `DOKPLOY_MAX_RESPONSE_CHARS` (default 50000) with a `_truncated` marker — refine the query instead of raising the limit blindly.
+- **Requests time out** after `DOKPLOY_TIMEOUT_MS` (default 30s); GET is retried on 5xx/429.
+- **OpenAPI spec is cached** in the OS temp dir — the server survives a temporarily unreachable Dokploy.
+
+### Recommended: filter the tool set
+
+The full list is ~540 tools (~60k tokens of `tools/list`). For day-to-day deploys set a profile in the `env` block:
+
+```json
+"DOKPLOY_TOOLS": "project_*,application_*,compose_*,deployment_*,docker_*,domain_*,postgres_*,redis_*,backup_*,rollback_*,schedule_*,settings_health"
+```
+
+This cuts the payload by ~70% and still covers all routine work. `DOKPLOY_READONLY=1` gives a safe monitoring-only profile (GET tools only).
 
 ### Setup
 
@@ -224,7 +241,7 @@ See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full 449-tool ref
 **Note:** On macOS/Linux use `"command": "npx"` directly instead of `cmd /c`.
 **Local dev:** use `"command": "node", "args": ["e:/My/MCP/dokploy-mcp/dist/index.js"]`.
 
-### MCP Tools by Category (449 total)
+### MCP Tools by Category (counts from Dokploy v0.28.4; v0.29.x adds ~90 more: `ai_*`, `forwardAuth_*`, `customRole_*`, `whitelabeling_*`, `patch_*`, etc.)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
