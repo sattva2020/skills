@@ -1,6 +1,9 @@
 # Dokploy API Reference
 
-Source: OpenAPI 3.1.0 spec from `settings.getOpenApiDocument` — **449 endpoints** (Dokploy v0.28.4).
+Source: OpenAPI 3.1.0 spec from `settings.getOpenApiDocument` — **449 endpoints**, captured on Dokploy v0.28.4.
+
+> Newer instances expose more (546 on v0.29.8). This file is a baseline snapshot, not a live
+> list — fetch `settings.getOpenApiDocument` from your own instance for the authoritative set.
 
 ## Authentication
 

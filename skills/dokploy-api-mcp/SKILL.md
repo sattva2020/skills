@@ -16,14 +16,18 @@ disable-model-invocation: false
 allowed-tools: Bash(curl *) Bash(npx *) Bash(docker *) Bash(ssh *) Bash(git *) Read Write WebFetch
 metadata:
   author: ai-ads-agent
-  version: "2.2"
+  version: "3.0"
   category: deployment
 ---
 
 # Dokploy Deployment
 
-Deploy and manage applications on a self-hosted Dokploy instance (v0.28.4+).
+Deploy and manage applications on a self-hosted Dokploy instance (v0.28+, tested through v0.29.x).
 Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Traefik v3.
+
+> **`DOKPLOY_URL` must NOT end with `/api`.** The MCP server appends `/api` itself; a base URL
+> ending in `/api` sends every request to `/api/api/...` and all calls fail. Use
+> `https://dokploy.example.com`.
 
 ## Quick Reference
 
@@ -43,22 +47,27 @@ Dokploy is an open-source PaaS (alternative to Vercel/Heroku) using Docker + Tra
 **On first use**, check if the Dokploy MCP server is configured. If not, run the interactive setup:
 
 ```
-1. Check: does ~/.claude/mcp.json contain a "dokploy" server entry?
+1. Check: is a "dokploy" MCP server configured? (`claude mcp list`)
 2. If NO → run: python3 skills/dokploy-api-mcp/scripts/setup.py
    (or the full path in the user's skill installation directory)
 3. The script will:
-   - Ask for Dokploy URL (e.g., https://dokploy.example.com)
-   - Ask for API key (generated in Dashboard → Settings → Profile → API/CLI)
-   - Validate the connection
-   - Auto-configure ~/.claude/mcp.json with the MCP server
+   - Ask for the Dokploy URL (e.g., https://dokploy.example.com — without /api)
+   - Ask for the API key (Dashboard → Settings → Profile → API/CLI)
+   - Validate the connection and report how many endpoints the instance exposes
+   - Ask which tool surface to use (tools / gateway / both)
+   - Register the server via `claude mcp add-json`, or print the JSON to paste
+     manually if the CLI is unavailable
 4. Tell the user: "Restart Claude Code to activate the Dokploy MCP server."
 ```
 
 **With CLI arguments** (non-interactive):
 
 ```bash
-python3 skills/dokploy-api-mcp/scripts/setup.py --url https://dokploy.example.com --key YOUR_API_KEY
+python3 skills/dokploy-api-mcp/scripts/setup.py --url https://dokploy.example.com --key YOUR_API_KEY --mode gateway
 ```
+
+Add `--insecure` only for instances with a self-signed certificate — it disables TLS
+verification, and the API key then travels over an unverified connection.
 
 **After setup**, the MCP server (`@sattva/dokploy-mcp`, ~540 tools) will be available on next Claude Code restart. Prefer MCP tools over curl for all operations.
 
@@ -133,7 +142,7 @@ Body: {"json":{...}}
 
 ### Key Endpoints
 
-See [references/API-REFERENCE.md](references/API-REFERENCE.md) for the full list (449 endpoints).
+See [references/API-REFERENCE.md](references/API-REFERENCE.md) for the full list (the v0.28.4 baseline; run `settings.getOpenApiDocument` for your instance's actual set).
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -236,25 +245,31 @@ This cuts the payload by ~70% and still covers all routine work. `DOKPLOY_READON
 
 **Automatic** (recommended): Run the setup script from the "First Run" section above — it configures MCP automatically.
 
-**Manual** (`~/.claude/mcp.json`):
+**Manual** — add to the `mcpServers` object of your Claude config (`~/.claude.json` for
+Claude Code; `claude mcp add-json` does it for you):
 
 ```json
 {
   "mcpServers": {
     "dokploy": {
+      "type": "stdio",
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp"],
+      "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp@latest"],
       "env": {
-        "DOKPLOY_URL": "https://dokploy.example.com/api",
-        "DOKPLOY_API_KEY": "<your-api-token>"
+        "DOKPLOY_URL": "https://dokploy.example.com",
+        "DOKPLOY_API_KEY": "<your-api-token>",
+        "DOKPLOY_MODE": "gateway"
       }
     }
   }
 }
 ```
 
-**Note:** On macOS/Linux use `"command": "npx"` directly instead of `cmd /c`.
-**Local dev:** use `"command": "node", "args": ["e:/My/MCP/dokploy-mcp/dist/index.js"]`.
+**Note:** `DOKPLOY_URL` carries no `/api` suffix — see the warning at the top.
+**Note:** On macOS/Linux use `"command": "npx", "args": ["-y", "@sattva/dokploy-mcp@latest"]`.
+**Local dev:** `"command": "node", "args": ["<path>/dokploy-mcp/dist/index.js"]`.
+**Env vars:** `DOKPLOY_MODE` (tools/gateway/both), `DOKPLOY_TOOLS`, `DOKPLOY_READONLY`,
+`DOKPLOY_TIMEOUT_MS`, `DOKPLOY_MAX_RESPONSE_CHARS`.
 
 ### MCP Tools by Category (counts from Dokploy v0.28.4; v0.29.x adds ~90 more: `ai_*`, `forwardAuth_*`, `customRole_*`, `whitelabeling_*`, `patch_*`, etc.)
 
@@ -315,10 +330,24 @@ This cuts the payload by ~70% and still covers all routine work. `DOKPLOY_READON
 6. curl health endpoint           → verify app is working
 ```
 
-### MCP Limitations (use Dashboard only)
+### Logs — available through MCP (v0.29.x)
 
-- **Build/container logs** — WebSocket only, no MCP or REST endpoint
-- **Docker exec into container** — No API endpoint, use SSH to VPS
+Logs are **not** Dashboard-only. Verified on v0.29.8, all read-only:
+
+| Tool | Returns |
+|------|---------|
+| `deployment_readLogs(deploymentId)` | Build/deploy log of one deployment |
+| `application_readLogs(applicationId)` | Application container logs |
+| `compose_readLogs(composeId, containerId)` | Logs of one compose container |
+| `postgres_readLogs` / `mysql_readLogs` / `mariadb_readLogs` / `mongo_readLogs` / `redis_readLogs` | Database service logs |
+
+Typical flow: `deployment_all(applicationId)` → take the newest `deploymentId` →
+`deployment_readLogs`. Only **live streaming** stays WebSocket-only; use the Dashboard
+when you need to watch a build in real time.
+
+### Remaining MCP limitations
+
+- **Docker exec into a container** — no API endpoint, use SSH to the VPS
 
 **Everything else is available through MCP tools**, including: Redis, MariaDB, MongoDB, Compose, Backups, Notifications, Schedules, Rollbacks, SSO, Patches, Organizations, and more.
 
@@ -328,12 +357,13 @@ See [references/PITFALLS.md](references/PITFALLS.md) for detailed solutions.
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
+| Every MCP call 404s | `DOKPLOY_URL` ends with `/api` → requests go to `/api/api/...` | Drop the `/api` suffix |
 | `COPY /app/public` fails | Git ignores empty dirs | `RUN mkdir -p public` in Dockerfile |
 | DB connection error | Neon HTTP driver vs standard PG | Use `postgres` (postgres.js) package |
 | Clerk `publishableKey` missing | SSG validates env at build | `export const dynamic = "force-dynamic"` + skip provider in build phase |
 | Container crash with migrate.mjs | standalone output lacks modules | Run migrations via in-app API endpoint |
-| Build logs unavailable via API | WebSocket only, no REST | Check Dashboard UI or poll `deployment.all` for status |
-| Container logs unavailable via API | WebSocket only | Use Dashboard UI |
+| Need build logs | — | `deployment.readLogs(deploymentId)`; only live streaming is WebSocket-only |
+| Need container logs | — | `application.readLogs` / `compose.readLogs` / `<db>.readLogs` |
 | External DB port unreachable | VPS firewall blocks port | Use internal Docker network names |
 | SSL certificate error from curl | Self-signed or Let's Encrypt delay | Use `curl -sk` or wait for cert provisioning |
 | 404 on API routes after deploy | Route not in standalone output | Verify route exists in `.next/standalone` |

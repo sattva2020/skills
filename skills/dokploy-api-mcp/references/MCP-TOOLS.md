@@ -8,16 +8,19 @@ In Claude Code, tools are named `mcp__dokploy__<category>_<method>` (e.g., `mcp_
 
 ## Setup
 
-### Claude Code (`~/.claude/mcp.json`)
+### Claude Code
+
+Register with `claude mcp add-json`, or add to the `mcpServers` object of `~/.claude.json`:
 
 ```json
 {
   "mcpServers": {
     "dokploy": {
+      "type": "stdio",
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp"],
+      "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp@latest"],
       "env": {
-        "DOKPLOY_URL": "https://dokploy.example.com/api",
+        "DOKPLOY_URL": "https://dokploy.example.com",
         "DOKPLOY_API_KEY": "<your-token>"
       }
     }
@@ -25,26 +28,39 @@ In Claude Code, tools are named `mcp__dokploy__<category>_<method>` (e.g., `mcp_
 }
 ```
 
-**Windows:** use `"command": "cmd", "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp"]`
-**macOS/Linux:** use `"command": "npx", "args": ["-y", "@sattva/dokploy-mcp"]`
-**Local dev:** use `"command": "node", "args": ["e:/My/MCP/dokploy-mcp/dist/index.js"]`
+**`DOKPLOY_URL` must NOT end with `/api`** — the server appends it, and a doubled
+`/api/api/...` makes every call fail.
 
-### Transport Modes
+**Windows:** `"command": "cmd", "args": ["/c", "npx", "-y", "@sattva/dokploy-mcp@latest"]`
+**macOS/Linux:** `"command": "npx", "args": ["-y", "@sattva/dokploy-mcp@latest"]`
+**Local dev:** `"command": "node", "args": ["<path>/dokploy-mcp/dist/index.js"]`
 
-- **stdio** (default) — for CLI and desktop apps
-- **HTTP** — Streamable HTTP (MCP 2025-03-26) + Legacy SSE (MCP 2024-11-05)
+### Transport
+
+**stdio only.** The server speaks stdio (`StdioServerTransport`); there is no HTTP or SSE
+transport — put it behind a proxy if you need one.
+
+### Environment variables
+
+| Variable | Effect |
+|---|---|
+| `DOKPLOY_MODE` | `tools` (default, one tool per endpoint), `gateway` (4 tools), `both` |
+| `DOKPLOY_TOOLS` | Wildcard name patterns, e.g. `project_*,application_*` |
+| `DOKPLOY_READONLY` | `1` exposes only GET tools |
+| `DOKPLOY_TIMEOUT_MS` | Request timeout, default 30000 |
+| `DOKPLOY_MAX_RESPONSE_CHARS` | Response truncation threshold, default 50000 |
 
 ## Tool Annotations
 
-All tools have semantic annotations:
+The server sets two annotations (v1.1.0+):
 
 | Annotation | Meaning |
 |------------|---------|
-| `readOnlyHint: true` | Safe read operation, no side effects |
-| `destructiveHint: true` | Modifies or deletes resources |
-| `destructiveHint: false` | Creates new resources |
-| `idempotentHint: true` | Safe to repeat |
-| `openWorldHint: true` | Calls external Dokploy API |
+| `readOnlyHint: true` | GET operation — safe to call, no side effects |
+| `destructiveHint: true` | Deploy / delete / stop / update and similar state changes |
+
+Creating operations carry neither: they are not read-only, but not destructive either.
+`idempotentHint` and `openWorldHint` are not emitted.
 
 ## When to Use MCP vs curl
 
