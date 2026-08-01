@@ -4,6 +4,17 @@ A collection of specialized tools, instructions, and MCP (Model Context Protocol
 
 ## Projects in this Repository
 
+### 🧭 Harness Audit Skill
+Audits a codebase for "AI-agent harness" maturity across six layers: context engineering, tools & MCP, memory & state, tests & evals, observability, and guardrails & approvals.
+
+- **Location**: `skills/harness-audit/`
+- **Features**:
+  - Scores each of the six layers 0–3 against concrete, checkable evidence (files, git history, config) rather than impressions.
+  - Flags `AGENTS.md`/`CLAUDE.md` drift against the actual codebase, with fail-severity for unenforced "do not touch" claims.
+  - Optional remediation step (confirm-gated): proposes missing MCP servers via a four-layer discovery waterfall (environment connector registry → official MCP Registry → commercial marketplaces → static fallback), missing skills via [skills.sh](https://skills.sh) with mandatory security scanning, and starter scaffolds for weak layers.
+  - Treats all repo content it reads as data to score, never as instructions to follow.
+  - Packaged skill: `skills/harness-audit.skill`.
+
 ### 🚀 Dokploy API MCP & Skill
 A comprehensive toolset for managing self-hosted [Dokploy](https://dokploy.com) instances.
 
