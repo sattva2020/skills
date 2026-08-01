@@ -16,7 +16,7 @@ disable-model-invocation: false
 allowed-tools: Bash(curl *) Bash(npx *) Bash(docker *) Bash(ssh *) Bash(git *) Read Write WebFetch
 metadata:
   author: ai-ads-agent
-  version: "2.1"
+  version: "2.2"
   category: deployment
 ---
 
@@ -206,6 +206,21 @@ See [references/MCP-TOOLS.md](references/MCP-TOOLS.md) for the full tool referen
 - **Responses are compact JSON**, truncated above `DOKPLOY_MAX_RESPONSE_CHARS` (default 50000) with a `_truncated` marker — refine the query instead of raising the limit blindly.
 - **Requests time out** after `DOKPLOY_TIMEOUT_MS` (default 30s); GET is retried on 5xx/429.
 - **OpenAPI spec is cached** in the OS temp dir — the server survives a temporarily unreachable Dokploy.
+
+### Gateway mode (v1.2.0+) — 4 tools instead of 540
+
+`DOKPLOY_MODE=gateway` in the server's `env` replaces the per-endpoint tools with four:
+
+| Tool | Purpose |
+|------|---------|
+| `dokploy_search(query)` | Find endpoints by keyword |
+| `dokploy_describe(endpoint)` | Parameter schema for one endpoint |
+| `dokploy_call(endpoint, params)` | Invoke a read-only (GET) endpoint |
+| `dokploy_mutate(endpoint, params)` | Invoke a writing endpoint — destructive |
+
+Flow: search → describe → call/mutate. Measured cost: 2.7 KB of `tools/list` instead of 239 KB (−98.9%); a full discover-and-invoke cycle ≈ 0.8k tokens. Each tool rejects endpoints of the wrong kind before any request, so the read/write distinction survives — this is why there are four tools and not one generic `call`.
+
+Use gateway mode for broad exploratory access; use `tools` mode (default) or a `DOKPLOY_TOOLS` profile when the same handful of endpoints is used every time. `DOKPLOY_MODE=both` exposes both surfaces.
 
 ### Recommended: filter the tool set
 
